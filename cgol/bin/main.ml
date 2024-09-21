@@ -4,8 +4,8 @@ let color_black = Raylib.Color.create 0 0 0 255
 let color_white = Raylib.Color.create 255 255 255 255
 
 module Window = struct
-  let width = 800
-  let height = 800
+  let width = 1200
+  let height = 1200
   let bg_color = color_black
 
   let setup () =
@@ -63,7 +63,7 @@ module Grid = struct
   let set_tile_state row col state t =
     let rec aux tiles index acc =
       match tiles with
-      | [] -> acc
+      | [] -> List.rev acc
       | h :: t ->
         if index = 0
         then (
@@ -71,7 +71,8 @@ module Grid = struct
           aux t (index - 1) (new_tile :: acc))
         else aux t (index - 1) (h :: acc)
     in
-    let tiles = aux t.tiles (row * col) [] in
+    let calc_index = (row * t.nrows) + col in
+    let tiles = aux t.tiles calc_index [] in
     { nrows = t.nrows; ncols = t.ncols; tiles }
   ;;
 end
@@ -92,7 +93,13 @@ let () =
   let size = 10 in
   let nrows = Window.height / size in
   let ncols = Window.width / size in
-  let grid = Grid.create nrows ncols size |> Grid.set_tile_state 1 0 Tile.Alive in
+  let grid =
+    Grid.create nrows ncols size
+    |> Grid.set_tile_state 0 0 Tile.Alive
+    |> Grid.set_tile_state (nrows - 1) 0 Tile.Alive
+    |> Grid.set_tile_state 0 (ncols - 1) Tile.Alive
+    |> Grid.set_tile_state (nrows - 1) (ncols - 1) Tile.Alive
+  in
   Window.setup ();
   loop grid
 ;;
