@@ -1,11 +1,11 @@
 [@@@ocaml.warning "-69-27-32-37-34-50"]
 
-let color_black = Raylib.Color.create 255 255 255 255
-let color_white = Raylib.Color.create 0 0 0 255
+let color_black = Raylib.Color.create 0 0 0 255
+let color_white = Raylib.Color.create 255 255 255 255
 
 module Window = struct
-  let width = 1200
-  let height = 1200
+  let width = 800
+  let height = 800
   let bg_color = color_black
 
   let setup () =
@@ -24,23 +24,22 @@ module Tile = struct
     { xpos : int
     ; ypos : int
     ; size : int
-    ; color : Raylib.Color.t
     ; state : state
     }
 
-  let dead_color = color_black
-  let alive_color = color_white
+  let dead_color = color_white
+  let alive_color = color_black
+  let create xpos ypos size state = { xpos; ypos; size; state }
+  let set_state new_state t = { xpos = t.xpos; ypos = t.ypos; size = t.size; state = new_state }
 
-  let create xpos ypos size state =
+  let draw t =
     let color =
-      match state with
+      match t.state with
       | Dead -> dead_color
       | Alive -> alive_color
     in
-    { xpos; ypos; size; color; state }
+    Raylib.draw_rectangle t.xpos t.ypos t.size t.size color
   ;;
-
-  let draw t = Raylib.draw_rectangle t.xpos t.ypos t.size t.size t.color
 end
 
 module Grid = struct
@@ -60,6 +59,21 @@ module Grid = struct
     in
     { nrows; ncols; tiles }
   ;;
+
+  let set_tile_state row col state t =
+    let rec aux tiles index acc =
+      match tiles with
+      | [] -> acc
+      | h :: t ->
+        if index = 0
+        then (
+          let new_tile = Tile.set_state state h in
+          aux t (index - 1) (new_tile :: acc))
+        else aux t (index - 1) (h :: acc)
+    in
+    let tiles = aux t.tiles (row * col) [] in
+    { nrows = t.nrows; ncols = t.ncols; tiles }
+  ;;
 end
 
 let rec loop grid =
@@ -75,10 +89,10 @@ let rec loop grid =
 ;;
 
 let () =
-  let size = 5 in
+  let size = 10 in
   let nrows = Window.height / size in
   let ncols = Window.width / size in
-  let grid = Grid.create nrows ncols size in
+  let grid = Grid.create nrows ncols size |> Grid.set_tile_state 1 0 Tile.Alive in
   Window.setup ();
   loop grid
 ;;
