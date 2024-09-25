@@ -4,7 +4,7 @@ let color_black = Raylib.Color.create 0 0 0 255
 let color_white = Raylib.Color.create 255 255 255 255
 
 module Window = struct
-  let width = 800
+  let width = 1200
   let height = 1200
   let bg_color = color_black
 
@@ -77,35 +77,57 @@ module Grid = struct
     { nrows = t.nrows; ncols = t.ncols; tiles }
   ;;
 
+  (*
+     I greatly dislike this. This needs a better solution. This is the best I have while doing two things:
+     1. Avoid associating a tile directly with its neighbors. I would like it to be a calculation.
+     2. Using references to solve this issue.
+
+     The main issue is finding a way to conditionally add to a list, but take no action otherwise. This could
+     probably be solved with a reference, but I am choosing to avoid using references right now.
+
+     TODO: Double check these index calculations
+  *)
   let find_neighbors row col t =
+    let calc_top = if row != 0 then true else false in
+    let calc_bottom = if row != t.nrows - 1 then true else false in
+    let calc_left = if col != 0 then true else false in
+    let calc_right = if col != t.ncols - 1 then true else false in
     let target_index = calc_index row col t in
-    let top_left = target_index - t.ncols - 1 in
-    let top_middle = target_index - t.ncols in
-    let top_right = target_index - t.ncols + 1 in
-    let middle_left = target_index - 1 in
-    let middle_right = target_index + 1 in
-    let bottom_left = target_index + t.ncols - 1 in
-    let bottom_middle = target_index + t.ncols in
-    let bottom_right = target_index + t.ncols + 1 in
-    [ top_left; top_middle; top_right; middle_left; middle_right; bottom_left; bottom_middle; bottom_right ]
-    |> List.filter (fun x -> x > 0)
-    |> List.filter (fun x -> x < t.nrows * t.ncols)
+    let top_middle = if calc_top then [ target_index - t.ncols ] else [] in
+    let bottom_middle = if calc_bottom then [ target_index + t.ncols ] else [] in
+    let middle_left = if calc_left then [ target_index - 1 ] else [] in
+    let middle_right = if calc_right then [ target_index + 1 ] else [] in
+    let top_left = if calc_top && calc_left then [ target_index - t.ncols - 1 ] else [] in
+    let top_right = if calc_top && calc_right then [ target_index - t.ncols + 1 ] else [] in
+    let bottom_left = if calc_bottom && calc_left then [ target_index + t.ncols - 1 ] else [] in
+    let bottom_right = if calc_bottom && calc_right then [ target_index + t.ncols + 1 ] else [] in
+    let neighbors =
+      top_middle
+      @ bottom_middle
+      @ middle_left
+      @ middle_right
+      @ top_left
+      @ top_right
+      @ bottom_left
+      @ bottom_right
+    in
+    neighbors
   ;;
 
   (* Underpopulation Rule
-     Any live cell with fewer than two live neighbours dies *)
+     Any live cell with fewer than two live neighbors dies *)
   let rule_1 t = assert false
 
   (* Survival Rule
-     Any live cell with two or three live neighbours lives on *)
+     Any live cell with two or three live neighbors lives on *)
   let rule_2 t = assert false
 
   (* Overpopulation Rule
-     Any live cell with more than three live neighbours dies *)
+     Any live cell with more than three live neighbors dies *)
   let rule_3 t = assert false
 
   (* Reproduction Rule
-     Any dead cell with exactly three live neighbours becomes a live cell *)
+     Any dead cell with exactly three live neighbors becomes a live cell *)
   let rule_4 t = assert false
   let draw t = List.iter Tile.draw t.tiles
 end
