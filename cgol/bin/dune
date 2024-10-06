@@ -1,4 +1,4 @@
 (executable
  (public_name cgol)
  (name main)
- (libraries cgol raylib))
+ (libraries lib unix raylib))

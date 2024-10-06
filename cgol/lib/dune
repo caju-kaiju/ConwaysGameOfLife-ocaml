@@ -1,2 +1,3 @@
 (library
- (name cgol))
+ (name lib)
+ (libraries raylib))
