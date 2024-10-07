@@ -1,9 +1,11 @@
 let alive_color = Raylib.Color.create 0x00 0x00 0x00 0xFF
 let dead_color = Raylib.Color.create 0xFF 0xFF 0xFF 0xFF
+let test_color = Raylib.Color.create 0xFF 0xA5 0x00 0xFF
 
 type state =
   | Dead
   | Alive
+  | Test
 
 type t =
   { xpos : int
@@ -20,6 +22,7 @@ let draw t =
     match t.state with
     | Dead -> dead_color
     | Alive -> alive_color
+    | Test -> test_color
   in
   Raylib.draw_rectangle t.xpos t.ypos t.size t.size color
 ;;
