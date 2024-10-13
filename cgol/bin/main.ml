@@ -40,10 +40,25 @@ module Window = struct
 
   let setup () =
     Raylib.init_window width height "Conway's Game Of Life";
+    Raylib.set_window_position 100 100;
     Raylib.set_target_fps 60;
     ()
   ;;
 end
+
+(* (* Underpopulation Rule *)
+   (*    Any live cell with fewer than two live neighbors dies *) *)
+(* let rule_1 t = assert false *)
+(* (* Survival Rule *)
+   (*    Any live cell with two or three live neighbors lives on *) *)
+(* let rule_2 t = assert false *)
+(* (* Overpopulation Rule *)
+   (*    Any live cell with more than three live neighbors dies *) *)
+(* let rule_3 t = assert false *)
+(* (* Reproduction Rule *)
+   (*    Any dead cell with exactly three live neighbors becomes a live cell *) *)
+(* let rule_4 t = assert false *)
+(* let draw t = List.iter Tile.draw t.tiles *)
 
 let rec loop (grid : Tile.t Grid.t) =
   match Raylib.window_should_close () with
@@ -66,7 +81,6 @@ let () =
     List.init nrows (fun r -> List.init ncols (fun c -> Tile.create (c * size) (r * size) size Tile.Dead))
     |> List.flatten
   in
-  (* let grid = Grid.create nrows ncols tiles |> random_population 3 in *)
   let grid = Grid.create nrows ncols tiles in
   let t1 = grid |> Grid.get 0 0 |> Tile.new_state Tile.Alive in
   let t2 = grid |> Grid.get 0 (grid.Grid.ncols - 1) |> Tile.new_state Tile.Alive in
@@ -75,11 +89,13 @@ let () =
   let t5 = grid |> Grid.get (grid.Grid.nrows / 2) (grid.Grid.nrows / 2) |> Tile.new_state Tile.Alive in
   let test_grid =
     grid
-    |> Grid.set 0 0 t1
-    |> Grid.set 0 (grid.Grid.ncols - 1) t2
-    |> Grid.set (grid.Grid.nrows - 1) 0 t3
-    |> Grid.set (grid.Grid.nrows - 1) (grid.Grid.ncols - 1) t4
-    |> Grid.set (grid.Grid.nrows / 2) (grid.Grid.nrows / 2) t5
+    |> Grid.set_many
+         [ 0, 0, t1
+         ; 0, grid.Grid.ncols - 1, t2
+         ; grid.Grid.nrows - 1, 0, t3
+         ; grid.Grid.nrows - 1, grid.Grid.ncols - 1, t4
+         ; grid.Grid.nrows / 2, grid.Grid.nrows / 2, t5
+         ]
     |> Utility.highlight_neighbors 0 0
     |> Utility.highlight_neighbors 0 (grid.Grid.ncols - 1)
     |> Utility.highlight_neighbors (grid.Grid.nrows - 1) 0

@@ -37,7 +37,19 @@ let set row col e t =
   { nrows = t.nrows; ncols = t.ncols; elements = new_elements }
 ;;
 
+let set_many (l : (int * int * 'a) list) (t : 'a t) =
+  let rec aux l' acc =
+    match l' with
+    | [] -> acc
+    | hd :: tl ->
+      (match hd with
+       | row, col, element -> aux tl (set row col element acc))
+  in
+  aux l t
+;;
+
 let iter f t = List.iter f t.elements
+let map f t = List.map f t.elements
 
 let get_neighbors row col t =
   let top_middle =
@@ -116,17 +128,3 @@ let get_neighbors row col t =
   in
   neighbors
 ;;
-
-(* (* Underpopulation Rule *)
-   (*    Any live cell with fewer than two live neighbors dies *) *)
-(* let rule_1 t = assert false *)
-(* (* Survival Rule *)
-   (*    Any live cell with two or three live neighbors lives on *) *)
-(* let rule_2 t = assert false *)
-(* (* Overpopulation Rule *)
-   (*    Any live cell with more than three live neighbors dies *) *)
-(* let rule_3 t = assert false *)
-(* (* Reproduction Rule *)
-   (*    Any dead cell with exactly three live neighbors becomes a live cell *) *)
-(* let rule_4 t = assert false *)
-(* let draw t = List.iter Tile.draw t.tiles *)
