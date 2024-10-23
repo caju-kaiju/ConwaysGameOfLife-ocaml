@@ -8,9 +8,19 @@ type 'a t =
   ; elements : 'a list
   }
 
+type 'a element =
+  { row : int
+  ; col : int
+  ; element : 'a
+  }
+
 let create nrows ncols element_list =
   assert (List.length element_list = nrows * ncols);
   { nrows; ncols; elements = element_list }
+;;
+
+let new_element (grid_element : 'a element) (element : 'a) =
+  { row = grid_element.row; col = grid_element.col; element }
 ;;
 
 let calc_index t row col =
@@ -20,6 +30,9 @@ let calc_index t row col =
   assert (col < t.ncols);
   (row * t.ncols) + col
 ;;
+
+let calc_row t index = index / t.ncols
+let calc_col t index row = index - (row * t.ncols)
 
 let get row col t =
   let index = calc_index t row col in
@@ -50,14 +63,32 @@ let set_many (l : (int * int * 'a) list) (t : 'a t) =
 
 let iter f t = List.iter f t.elements
 let map f t = List.map f t.elements
+let filter f t = List.filter f t.elements
 
-let get_neighbors row col t =
+let find_all f t =
+  let rec aux elements count acc =
+    match elements with
+    | [] -> acc
+    | hd :: tl ->
+      if f hd
+      then (
+        let row = calc_row t count in
+        let col = calc_col t count row in
+        let e = { row; col; element = hd } in
+        aux tl (count + 1) (e :: acc))
+      else aux tl (count + 1) acc
+  in
+  aux t.elements 0 []
+;;
+
+let get_neighbors row col t : 'a element list =
   let top_middle =
     if row > 0
     then (
       let trow = row - 1 in
       let tcol = col in
-      [ (trow, tcol), get trow tcol t ])
+      let e = get trow tcol t in
+      [ { row = trow; col = tcol; element = e } ])
     else []
   in
   let bottom_middle =
@@ -65,7 +96,8 @@ let get_neighbors row col t =
     then (
       let trow = row + 1 in
       let tcol = col in
-      [ (trow, tcol), get trow tcol t ])
+      let e = get trow tcol t in
+      [ { row = trow; col = tcol; element = e } ])
     else []
   in
   let middle_left =
@@ -73,7 +105,8 @@ let get_neighbors row col t =
     then (
       let trow = row in
       let tcol = col - 1 in
-      [ (trow, tcol), get trow tcol t ])
+      let e = get trow tcol t in
+      [ { row = trow; col = tcol; element = e } ])
     else []
   in
   let middle_right =
@@ -81,7 +114,8 @@ let get_neighbors row col t =
     then (
       let trow = row in
       let tcol = col + 1 in
-      [ (trow, tcol), get trow tcol t ])
+      let e = get trow tcol t in
+      [ { row = trow; col = tcol; element = e } ])
     else []
   in
   let top_left =
@@ -89,7 +123,8 @@ let get_neighbors row col t =
     then (
       let trow = row - 1 in
       let tcol = col - 1 in
-      [ (trow, tcol), get trow tcol t ])
+      let e = get trow tcol t in
+      [ { row = trow; col = tcol; element = e } ])
     else []
   in
   let top_right =
@@ -97,7 +132,8 @@ let get_neighbors row col t =
     then (
       let trow = row - 1 in
       let tcol = col + 1 in
-      [ (trow, tcol), get trow tcol t ])
+      let e = get trow tcol t in
+      [ { row = trow; col = tcol; element = e } ])
     else []
   in
   let bottom_left =
@@ -105,7 +141,8 @@ let get_neighbors row col t =
     then (
       let trow = row + 1 in
       let tcol = col - 1 in
-      [ (trow, tcol), get trow tcol t ])
+      let e = get trow tcol t in
+      [ { row = trow; col = tcol; element = e } ])
     else []
   in
   let bottom_right =
@@ -113,7 +150,8 @@ let get_neighbors row col t =
     then (
       let trow = row + 1 in
       let tcol = col + 1 in
-      [ (trow, tcol), get trow tcol t ])
+      let e = get trow tcol t in
+      [ { row = trow; col = tcol; element = e } ])
     else []
   in
   let neighbors =

@@ -17,6 +17,16 @@ type t =
 let create xpos ypos size state = { xpos; ypos; size; state }
 let new_state state t = { xpos = t.xpos; ypos = t.ypos; size = t.size; state }
 
+let to_string t =
+  let state =
+    match t.state with
+    | Dead -> "Dead"
+    | Alive -> "Alive"
+    | Test -> "Alive"
+  in
+  Printf.sprintf "(%d, %d), size: %d, state: %s" t.xpos t.ypos t.size state
+;;
+
 let draw t =
   let color =
     match t.state with
