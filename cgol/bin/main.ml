@@ -93,6 +93,49 @@ let underpopulation_rule (grid : Tile.t Grid.t) : Tile.t Grid.element list =
   aux alive_tiles []
 ;;
 
+(*
+   collect: How to find all appropriate tiles
+   filter: Filter out non-relavent neighbors
+   rule: Rule to check to apply based on filtered neighbors
+   transform: How to handle the Tile if rule is met
+*)
+let apply_rule ~collect ~filter ~rule ~transform grid =
+  let tiles = Grid.find_all collect grid in
+  let rec aux (tiles' : Tile.t Grid.element list) acc =
+    match tiles' with
+    | [] -> acc
+    | hd :: tl ->
+      let neighbors = Grid.get_neighbors hd.row hd.col grid |> List.filter filter in
+      if rule neighbors
+      then (
+        let new_tile = transform hd.element in
+        let new_element = Grid.new_element hd new_tile in
+        aux tl (new_element :: acc))
+      else aux tl acc
+  in
+  aux tiles []
+;;
+
+(* Underpopulation Rule
+   Any live cell with fewer than two live neighbors dies *)
+let apply_rule_underpopulation =
+  apply_rule
+    ~collect:(fun (tile : Tile.t) -> tile.state = Tile.Alive)
+    ~filter:(fun (e : Tile.t Grid.element) -> e.element.state = Tile.Alive)
+    ~rule:(fun (neighbors : Tile.t Grid.element list) -> List.length neighbors < 2)
+    ~transform:(fun (tile : Tile.t) -> Tile.new_state Tile.Dead tile)
+;;
+
+(* Overpopulation Rule
+   Any live cell with more than three live neighbors dies *)
+let apply_rule_overpopulation =
+  apply_rule
+    ~collect:(fun (tile : Tile.t) -> tile.state = Tile.Alive)
+    ~filter:(fun (e : Tile.t Grid.element) -> e.element.state = Tile.Alive)
+    ~rule:(fun (neighbors : Tile.t Grid.element list) -> List.length neighbors > 3)
+    ~transform:(fun (tile : Tile.t) -> Tile.new_state Tile.Dead tile)
+;;
+
 let rec loop (grid : Tile.t Grid.t) =
   match Raylib.window_should_close () with
   | true -> Raylib.close_window ()
@@ -101,7 +144,7 @@ let rec loop (grid : Tile.t Grid.t) =
     Raylib.begin_drawing ();
     Raylib.clear_background Window.bg_color;
     Grid.iter Tile.draw new_grid;
-    underpopulation_rule grid |> List.length |> print_int;
+    (* underpopulation_rule grid |> List.length |> print_int; *)
     print_newline ();
     Raylib.end_drawing ();
     loop new_grid
