@@ -42,8 +42,8 @@ let random_population (n : int) (grid : Tile.t Grid.t) =
 ;;
 
 module Window = struct
-  let width = 1200
-  let height = 1200
+  let width = 600
+  let height = 600
   let bg_color = color_orange
 
   let setup () =
@@ -53,45 +53,6 @@ module Window = struct
     ()
   ;;
 end
-
-(* Underpopulation Rule
-   Any live cell with fewer than two live neighbors dies *)
-(* (* Survival Rule *)
-   (*    Any live cell with two or three live neighbors lives on *) *)
-(* (* Overpopulation Rule *)
-   (*    Any live cell with more than three live neighbors dies *) *)
-(* (* Reproduction Rule *)
-   (*    Any dead cell with exactly three live neighbors becomes a live cell *) *)
-
-(* Underpopulation Rule
-   Any live cell with fewer than two live neighbors dies
-
-   1. Get all the alive tiles.
-   2. For each live tile, get its neighbors.
-   3. Filter out neighbors that are not Alive.
-   4. If there are less than 2 neighbors, die.
-   returns a list of Tile.t which have died.
-*)
-let underpopulation_rule (grid : Tile.t Grid.t) : Tile.t Grid.element list =
-  let alive_tiles = Grid.find_all (fun (tile : Tile.t) -> tile.state = Tile.Alive) grid in
-  let rec aux (alive_tiles' : Tile.t Grid.element list) acc =
-    match alive_tiles' with
-    | [] -> acc
-    | hd :: tl ->
-      let alive_neighbors =
-        Grid.get_neighbors hd.row hd.col grid
-        |> List.filter (fun (e : Tile.t Grid.element) -> e.element.state = Tile.Alive)
-      in
-      let death = List.length alive_neighbors < 2 in
-      if death
-      then (
-        let dead_tile = Tile.new_state Tile.Dead hd.element in
-        let dead_element = Grid.new_element hd dead_tile in
-        aux tl (dead_element :: acc))
-      else aux tl acc
-  in
-  aux alive_tiles []
-;;
 
 (*
    collect: How to find all appropriate tiles
@@ -136,16 +97,28 @@ let apply_rule_overpopulation =
     ~transform:(fun (tile : Tile.t) -> Tile.new_state Tile.Dead tile)
 ;;
 
+(* Reproduction Rule
+   Any dead cell with exactly three live neighbors becomes a live cell *)
+let appy_rule_reproduction =
+  apply_rule
+    ~collect:(fun (tile : Tile.t) -> tile.state = Tile.Dead)
+    ~filter:(fun (e : Tile.t Grid.element) -> e.element.state = Tile.Alive)
+    ~rule:(fun (neighbors : Tile.t Grid.element list) -> List.length neighbors = 3)
+    ~transform:(fun (tile : Tile.t) -> Tile.new_state Tile.Alive tile)
+;;
+
 let rec loop (grid : Tile.t Grid.t) =
   match Raylib.window_should_close () with
   | true -> Raylib.close_window ()
   | false ->
-    let new_grid = grid in
+    let generation_change =
+      apply_rule_underpopulation grid @ apply_rule_overpopulation grid @ appy_rule_reproduction grid
+      |> List.map (fun (e : Tile.t Grid.element) -> e.row, e.col, e.element)
+    in
+    let new_grid = Grid.set_many generation_change grid in
     Raylib.begin_drawing ();
     Raylib.clear_background Window.bg_color;
     Grid.iter Tile.draw new_grid;
-    (* underpopulation_rule grid |> List.length |> print_int; *)
-    print_newline ();
     Raylib.end_drawing ();
     loop new_grid
 ;;
@@ -159,24 +132,7 @@ let () =
     List.init nrows (fun r -> List.init ncols (fun c -> Tile.create (c * size) (r * size) size Tile.Dead))
     |> List.flatten
   in
-  let grid = Grid.create nrows ncols tiles in
-  (* let test_grid = *)
-  (* random_population 500 grid *)
-  let t1 = grid |> Grid.get 0 0 |> Tile.new_state Tile.Alive in
-  let t2 = grid |> Grid.get 0 (grid.Grid.ncols - 1) |> Tile.new_state Tile.Alive in
-  let t3 = grid |> Grid.get (grid.Grid.nrows - 1) 0 |> Tile.new_state Tile.Alive in
-  let t4 = grid |> Grid.get (grid.Grid.nrows - 1) (grid.Grid.ncols - 1) |> Tile.new_state Tile.Alive in
-  let t5 = grid |> Grid.get (grid.Grid.nrows / 2) (grid.Grid.nrows / 2) |> Tile.new_state Tile.Alive in
-  let test_grid =
-    grid
-    |> Grid.set_many
-         [ 0, 0, t1
-         ; 0, grid.Grid.ncols - 1, t2
-         ; grid.Grid.nrows - 1, 0, t3
-         ; grid.Grid.nrows - 1, grid.Grid.ncols - 1, t4
-         ; grid.Grid.nrows / 2, grid.Grid.nrows / 2, t5
-         ]
-  in
+  let grid = Grid.create nrows ncols tiles |> random_population 500 in
   Window.setup ();
-  loop test_grid
+  loop grid
 ;;
