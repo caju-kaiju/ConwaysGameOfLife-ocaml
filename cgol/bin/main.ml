@@ -4,29 +4,6 @@ open Lib
 
 let color_orange = Raylib.Color.create 0xFF 0xA5 0x00 0xFF
 
-module Utility = struct
-  let highlight_neighbors row col grid =
-    let rec aux (neighbors' : 'a Grid.element list) grid' =
-      match neighbors' with
-      | [] -> grid'
-      | h :: t ->
-        let trow = h.row in
-        let tcol = h.col in
-        let tile = h.element |> Tile.new_state Tile.Test in
-        aux t (Grid.set trow tcol tile grid')
-    in
-    aux (Grid.get_neighbors row col grid) grid
-  ;;
-
-  let log_info str = "\n" ^ str |> Raylib.trace_log (Raylib.TraceLogLevel.to_int Raylib.TraceLogLevel.Info)
-  let log_tile (tile : Tile.t) = log_info (Tile.to_string tile)
-
-  let log_grid_element (e : 'a Grid.element) =
-    let info = Printf.sprintf "(%d, %d): %s" e.row e.col (Tile.to_string e.element) in
-    log_info info
-  ;;
-end
-
 let random_population (n : int) (grid : Tile.t Grid.t) =
   let rec aux n' grid =
     match n' <= 0 with
@@ -42,8 +19,8 @@ let random_population (n : int) (grid : Tile.t Grid.t) =
 ;;
 
 module Window = struct
-  let width = 600
-  let height = 600
+  let width = 800
+  let height = 800
   let bg_color = color_orange
 
   let setup () =
@@ -57,7 +34,7 @@ end
 (*
    collect: How to find all appropriate tiles
    filter: Filter out non-relavent neighbors
-   rule: Rule to check to apply based on filtered neighbors
+   rule: Rule to apply based on filtered neighbors
    transform: How to handle the Tile if rule is met
 *)
 let apply_rule ~collect ~filter ~rule ~transform grid =
@@ -107,20 +84,41 @@ let appy_rule_reproduction =
     ~transform:(fun (tile : Tile.t) -> Tile.new_state Tile.Alive tile)
 ;;
 
-let rec loop (grid : Tile.t Grid.t) =
+let parrallel_rule_apply pool grid =
+  let underpopulation_a = Domainslib.Task.async pool (fun _ -> apply_rule_underpopulation grid) in
+  let overopulation_a = Domainslib.Task.async pool (fun _ -> apply_rule_overpopulation grid) in
+  let repdroduction_a = Domainslib.Task.async pool (fun _ -> appy_rule_reproduction grid) in
+  let generation_change =
+    Domainslib.Task.await pool underpopulation_a
+    @ Domainslib.Task.await pool overopulation_a
+    @ Domainslib.Task.await pool repdroduction_a
+    |> List.map (fun (e : Tile.t Grid.element) -> e.row, e.col, e.element)
+  in
+  Grid.set_many generation_change grid
+;;
+
+let inital_draw grid =
+  Raylib.begin_drawing ();
+  Raylib.clear_background Window.bg_color;
+  Grid.iter Tile.draw grid;
+  Raylib.end_drawing ()
+;;
+
+let rec wait_for_go () =
+  Raylib.poll_input_events ();
+  if Raylib.is_key_pressed Raylib.Key.Space then () else wait_for_go ()
+;;
+
+let rec loop (grid : Tile.t Grid.t) pool =
   match Raylib.window_should_close () with
   | true -> Raylib.close_window ()
   | false ->
-    let generation_change =
-      apply_rule_underpopulation grid @ apply_rule_overpopulation grid @ appy_rule_reproduction grid
-      |> List.map (fun (e : Tile.t Grid.element) -> e.row, e.col, e.element)
-    in
-    let new_grid = Grid.set_many generation_change grid in
+    let new_grid = Domainslib.Task.run pool (fun _ -> parrallel_rule_apply pool grid) in
     Raylib.begin_drawing ();
     Raylib.clear_background Window.bg_color;
     Grid.iter Tile.draw new_grid;
     Raylib.end_drawing ();
-    loop new_grid
+    loop new_grid pool
 ;;
 
 let () =
@@ -132,7 +130,11 @@ let () =
     List.init nrows (fun r -> List.init ncols (fun c -> Tile.create (c * size) (r * size) size Tile.Dead))
     |> List.flatten
   in
-  let grid = Grid.create nrows ncols tiles |> random_population 500 in
+  let grid = Grid.create nrows ncols tiles |> random_population 1000 in
+  let pool = Domainslib.Task.setup_pool ~num_domains:3 () in
   Window.setup ();
-  loop grid
+  inital_draw grid;
+  wait_for_go ();
+  loop grid pool;
+  Domainslib.Task.teardown_pool pool
 ;;

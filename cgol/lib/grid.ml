@@ -62,8 +62,6 @@ let set_many (l : (int * int * 'a) list) (t : 'a t) =
 ;;
 
 let iter f t = List.iter f t.elements
-let map f t = List.map f t.elements
-let filter f t = List.filter f t.elements
 
 let find_all f t =
   let rec aux elements count acc =
