@@ -19,8 +19,8 @@ let random_population (n : int) (grid : Tile.t Grid.t) =
 ;;
 
 module Window = struct
-  let width = 800
-  let height = 800
+  let width = 700
+  let height = 700
   let bg_color = color_orange
 
   let setup () =
@@ -130,7 +130,7 @@ let () =
     List.init nrows (fun r -> List.init ncols (fun c -> Tile.create (c * size) (r * size) size Tile.Dead))
     |> List.flatten
   in
-  let grid = Grid.create nrows ncols tiles |> random_population 1000 in
+  let grid = Grid.create nrows ncols tiles |> random_population 2000 in
   let pool = Domainslib.Task.setup_pool ~num_domains:3 () in
   Window.setup ();
   inital_draw grid;
